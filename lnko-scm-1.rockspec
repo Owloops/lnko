@@ -3,12 +3,12 @@ package = "lnko"
 version = "scm-1"
 
 source = {
-    url = "git+https://github.com/pgagnidze/lnko.git",
+    url = "git+https://github.com/luanvil/lnko.git",
 }
 
 description = {
     summary = "Simple stow-like dotfile linker",
-    homepage = "https://github.com/pgagnidze/lnko",
+    homepage = "https://github.com/luanvil/lnko",
     license = "GPL-3.0",
 }
 

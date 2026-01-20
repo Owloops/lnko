@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-REPO="pgagnidze/lnko"
+REPO="luanvil/lnko"
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 
