@@ -361,9 +361,7 @@ function module.link_package(source_dir, package, target_dir, options)
     end,
   })
 
-  if options.dry_run then
-    log.info(string.format("preview: %d task(s), %d skipped", #tasks, #skipped))
-  end
+  if options.dry_run then log.info(string.format("preview: %d task(s), %d skipped", #tasks, #skipped)) end
 
   if failed > 0 then
     log.warn(package .. ": " .. executed .. " completed, " .. failed .. " failed")
