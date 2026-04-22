@@ -251,7 +251,7 @@ describe("lnko", function()
       os.execute("echo 'git' > " .. source .. "/pkg/.git/config")
       os.execute("echo 'readme' > " .. source .. "/pkg/README.md")
 
-      lnko.link_package(source, "pkg", target, { ignore = { "^%.git", "README" } })
+      lnko.link_package(source, "pkg", target, { ignore = { ".git", "README*" } })
       assert.is_true(fs.is_symlink(target .. "/file.txt"))
       assert.is_false(fs.exists(target .. "/.git"))
       assert.is_false(fs.exists(target .. "/README.md"))

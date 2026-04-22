@@ -47,9 +47,47 @@ end
 
 -- helpers --
 
-local function matches_ignore(path, patterns)
-  for _, pattern in ipairs(patterns) do
-    if path:match(pattern) then return true end
+local function compile_glob(glob)
+  local specials = "().%+-?[]^$*"
+  local buf = { "^" }
+  for i = 1, #glob do
+    local c = glob:sub(i, i)
+    if c == "*" then
+      buf[#buf + 1] = "[^/]*"
+    elseif c == "?" then
+      buf[#buf + 1] = "[^/]"
+    elseif specials:find(c, 1, true) then
+      buf[#buf + 1] = "%" .. c
+    else
+      buf[#buf + 1] = c
+    end
+  end
+  buf[#buf + 1] = "$"
+  return {
+    pattern = table.concat(buf),
+    path_scoped = glob:find("/", 1, true) ~= nil,
+  }
+end
+
+local function compile_ignores(patterns)
+  local compiled = {}
+  for _, glob in ipairs(patterns) do
+    compiled[#compiled + 1] = compile_glob(glob)
+  end
+  return compiled
+end
+
+local function is_ignored(relative_path, compiled)
+  local basename
+  for _, c in ipairs(compiled) do
+    local target
+    if c.path_scoped then
+      target = relative_path
+    else
+      basename = basename or (relative_path:match("[^/]+$") or relative_path)
+      target = basename
+    end
+    if target:match(c.pattern) then return true end
   end
   return false
 end
@@ -128,6 +166,8 @@ function module.plan_link(source_dir, package, target_dir, options)
 
   log.debug("planning link for " .. package, options.verbose)
 
+  local ignores = compile_ignores(options.ignore or {})
+
   local function handle_dir_conflict(source_path, target_path)
     local action = resolve_conflict(target_path, source_path, options)
     if action == "quit" then return "quit" end
@@ -168,7 +208,8 @@ function module.plan_link(source_dir, package, target_dir, options)
       local target_path = fs.join(target_subdir, entry)
       local relative_path = source_path:sub(#pkg_dir + 2)
 
-      if matches_ignore(relative_path, options.ignore or {}) then
+      if is_ignored(relative_path, ignores) then
+        plan_mod.add_skipped(plan, target_path)
         log.debug("ignoring " .. relative_path, options.verbose)
       elseif fs.is_directory(source_path) and not fs.is_symlink(source_path) then
         if plan_mod.is_a_link(plan, target_path) then
@@ -294,8 +335,17 @@ function module.link_package(source_dir, package, target_dir, options)
   end
 
   local tasks = plan_mod.get_tasks(plan)
+  local skipped = plan_mod.get_skipped(plan)
+
+  if options.dry_run or options.verbose then
+    for _, path in ipairs(skipped) do
+      log.action("skip", path)
+    end
+  end
+
   if #tasks == 0 then
-    log.success(package .. ": already linked")
+    local suffix = #skipped > 0 and (" (" .. #skipped .. " skipped)") or ""
+    log.success(package .. ": already linked" .. suffix)
     return true
   end
 
@@ -310,6 +360,10 @@ function module.link_package(source_dir, package, target_dir, options)
       end
     end,
   })
+
+  if options.dry_run then
+    log.info(string.format("preview: %d task(s), %d skipped", #tasks, #skipped))
+  end
 
   if failed > 0 then
     log.warn(package .. ": " .. executed .. " completed, " .. failed .. " failed")
@@ -553,7 +607,8 @@ Options:
   -b, --backup          Auto-backup conflicts to <target>/.lnko-backup/
   -s, --skip            Auto-skip conflicts
   -f, --force           Auto-overwrite conflicts (dangerous)
-  --ignore <pattern>    Ignore files matching pattern (can be repeated)
+  --ignore <glob>       Ignore files matching glob (can be repeated;
+                        use '/' for path-scoped globs, basename otherwise)
   --no-folding          Don't fold directories into symlinks
   --remove-orphans      Auto-remove orphan symlinks
   --keep-orphans        Auto-keep orphan symlinks
@@ -565,7 +620,7 @@ Examples:
 
   lnko link -d ~/dotfiles/config -t ~ bash git nvim
 
-  lnko link -b --ignore '\.git' --ignore 'README' bash
+  lnko link -b --ignore '.git' --ignore 'README*' --ignore '*.swp' bash
 
   lnko status -d ~/dotfiles/config
 

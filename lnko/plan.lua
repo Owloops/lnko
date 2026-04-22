@@ -12,6 +12,7 @@ function module.new()
   return {
     tasks = {},
     conflicts = {},
+    skipped = {},
     link_tasks = {},
     dir_tasks = {},
   }
@@ -41,6 +42,14 @@ function module.add_conflict(plan, path, message)
     path = path,
     message = message,
   }
+end
+
+function module.add_skipped(plan, path)
+  plan.skipped[#plan.skipped + 1] = path
+end
+
+function module.get_skipped(plan)
+  return plan.skipped
 end
 
 function module.has_conflicts(plan)
