@@ -101,7 +101,7 @@ lnko clean
 | `-b, --backup` | Auto-backup conflicts to `<target>/.lnko-backup/` |
 | `-s, --skip` | Auto-skip conflicts |
 | `-f, --force` | Auto-overwrite conflicts (dangerous) |
-| `--ignore <pattern>` | Ignore files matching pattern (can be repeated) |
+| `--ignore <glob>` | Ignore files matching glob (can be repeated; use `/` for path-scoped globs, basename otherwise) |
 | `--no-folding` | Don't fold directories into symlinks |
 | `--remove-orphans` | Auto-remove orphan symlinks (for `clean` command) |
 | `--keep-orphans` | Auto-keep orphan symlinks (for `clean` command) |
