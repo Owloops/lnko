@@ -11,6 +11,7 @@ description = {
     homepage = "https://github.com/Owloops/lnko",
     license = "GPL-3.0",
     maintainer = "Papuna Gagnidze <pgagnidze@owloops.com>",
+}
 
 dependencies = {
     "lua >= 5.1, < 5.5",
