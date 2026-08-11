@@ -13,6 +13,7 @@ description = {
     detailed = $detailed_description,
     labels = $labels,
     homepage = "$homepage",
+    maintainer = "Papuna Gagnidze <pgagnidze@owloops.com>",
     $license
 }
 
