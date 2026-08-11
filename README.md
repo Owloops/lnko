@@ -10,8 +10,8 @@ Simple stow-like dotfile linker.
   <img src="assets/demo.gif" alt="lnko demo" width="600"/>
 </p>
 
-[![CI](https://github.com/luanvil/lnko/actions/workflows/ci.yml/badge.svg)](https://github.com/luanvil/lnko/actions/workflows/ci.yml)
-[![LuaRocks](https://img.shields.io/luarocks/v/luanvil/lnko?color=1e3a8a)](https://luarocks.org/modules/luanvil/lnko)
+[![CI](https://github.com/Owloops/lnko/actions/workflows/ci.yml/badge.svg)](https://github.com/Owloops/lnko/actions/workflows/ci.yml)
+[![LuaRocks](https://img.shields.io/luarocks/v/owloops/lnko?color=1e3a8a)](https://luarocks.org/modules/owloops/lnko)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-000080)](LICENSE)
 
 </div>
@@ -60,7 +60,7 @@ Portable across machines. Symlinks use relative paths, not absolute.
 Downloads a self-contained binary with no dependencies:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/luanvil/lnko/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Owloops/lnko/main/install.sh | bash
 ```
 
 ### LuaRocks
