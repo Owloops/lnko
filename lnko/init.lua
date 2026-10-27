@@ -636,17 +636,7 @@ end
 
 -- cli --
 
-function module.show_help()
-  output.write(output.color("bold"), "lnko", output.reset(), " - a simple stow-like dotfile linker\n")
-  output.write([[
-Usage: lnko <command> [options] [packages...]
-
-Commands:
-  link <packages...>    Create symlinks for packages
-  unlink <packages...>  Remove symlinks for packages
-  status                Show status of all packages
-  clean                 Remove orphan symlinks
-
+local help_options = [[
 Options:
   -d, --dir <dir>       Source directory containing packages (default: cwd)
   -t, --target <dir>    Target directory (default: $HOME)
@@ -662,7 +652,10 @@ Options:
   --remove-orphans      Auto-remove orphan symlinks
   --keep-orphans        Auto-keep orphan symlinks
   -h, --help            Show this help
+]]
 
+local command_examples = {
+  link = [[
 Examples:
   cd ~/dotfiles/config
   lnko link bash git nvim
@@ -671,13 +664,58 @@ Examples:
 
   lnko link -b --ignore '.git' --ignore 'README*' --ignore '*.swp' bash
 
-  lnko status -d ~/dotfiles/config
-
+  lnko link -n bash
+]],
+  unlink = [[
+Examples:
   lnko unlink bash
 
+  lnko unlink -d ~/dotfiles/config bash git
+]],
+  status = [[
+Examples:
+  lnko status -d ~/dotfiles/config
+
+  lnko status --json -d ~/dotfiles/config
+]],
+  clean = [[
+Examples:
   lnko clean -d ~/dotfiles/config
 
-  lnko link -n bash
+  lnko clean --remove-orphans -d ~/dotfiles/config
+]],
+}
+
+local command_summaries = {
+  link = "link <packages...>    Create symlinks for packages",
+  unlink = "unlink <packages...>  Remove symlinks for packages",
+  status = "status                Show status of all packages",
+  clean = "clean                 Remove orphan symlinks",
+}
+
+function module.show_help(command)
+  if command and command_summaries[command] then
+    output.write(output.color("bold"), "lnko", output.reset(), " ", command, "\n\n")
+    output.write(command_summaries[command], "\n\n")
+    output.write(help_options, "\n")
+    if command_examples[command] then output.write("\n", command_examples[command]) end
+    return
+  end
+
+  output.write(output.color("bold"), "lnko", output.reset(), " - a simple stow-like dotfile linker\n")
+  output.write([[
+Usage: lnko <command> [options] [packages...]
+
+Commands:
+]])
+
+  for _, line in ipairs({ "link", "unlink", "status", "clean" }) do
+    output.write("  ", command_summaries[line], "\n")
+  end
+
+  output.write([[
+
+Run 'lnko <command> --help' for command-specific examples.
 ]])
 end
 
@@ -704,7 +742,9 @@ function module.main(args)
     local a = args[i]
 
     if a == "-h" or a == "--help" then
-      module.show_help()
+      local scope = nil
+      if command then scope = command end
+      module.show_help(scope)
       os.exit(0)
     elseif a == "-d" or a == "--dir" then
       i = i + 1
@@ -746,7 +786,6 @@ function module.main(args)
     module.show_help()
     os.exit(2)
   end
-
   if not options.source_dir then options.source_dir = fs.current_dir() end
 
   if not fs.is_directory(options.source_dir) then
