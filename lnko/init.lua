@@ -645,23 +645,190 @@ end
 
 -- cli --
 
-local help_options = [[
-Options:
-  -d, --dir <dir>       Source directory containing packages (default: cwd)
-  -t, --target <dir>    Target directory (default: $HOME)
-  -n, --dry-run         Show what would be done
-  -v, --verbose         Show debug output
-  -b, --backup          Auto-backup conflicts to <target>/.lnko-backup/
-  -s, --skip            Auto-skip conflicts
-  -f, --force           Auto-overwrite conflicts (dangerous)
-  --ignore <glob>       Ignore files matching glob (can be repeated;
-                        use '/' for path-scoped globs, basename otherwise)
-  --no-folding          Don't fold directories into symlinks
-  --json                Output as JSON (with status)
-  --remove-orphans      Auto-remove orphan symlinks
-  --keep-orphans        Auto-keep orphan symlinks
-  -h, --help            Show this help
-]]
+local cli_options = {
+  {
+    flags = { "-d", "--dir" },
+    key = "source_dir",
+    arg = "dir",
+    desc = "Source directory containing packages (default: cwd)",
+    all = true,
+  },
+  {
+    flags = { "-t", "--target" },
+    key = "target_dir",
+    arg = "dir",
+    desc = "Target directory (default: $HOME)",
+    all = true,
+  },
+  {
+    flags = { "-n", "--dry-run" },
+    key = "dry_run",
+    desc = "Show what would be done",
+    commands = { link = true, unlink = true, clean = true },
+    all = false,
+  },
+  {
+    flags = { "-v", "--verbose" },
+    key = "verbose",
+    desc = "Show debug output",
+    all = true,
+  },
+  {
+    flags = { "-b", "--backup" },
+    key = "backup",
+    desc = "Auto-backup conflicts to <target>/.lnko-backup/",
+    commands = { link = true },
+    all = false,
+  },
+  {
+    flags = { "-s", "--skip" },
+    key = "skip",
+    desc = "Auto-skip conflicts",
+    commands = { link = true },
+    all = false,
+  },
+  {
+    flags = { "-f", "--force" },
+    key = "force",
+    desc = "Auto-overwrite conflicts (dangerous)",
+    commands = { link = true },
+    all = false,
+  },
+  {
+    flags = { "--ignore" },
+    key = "ignore",
+    arg = "glob",
+    list = true,
+    desc = "Ignore files matching glob (can be repeated)",
+    commands = { link = true },
+    all = false,
+  },
+  {
+    flags = { "--no-folding" },
+    key = "no_folding",
+    desc = "Don't fold directories into symlinks",
+    commands = { link = true },
+    all = false,
+  },
+  {
+    flags = { "--json" },
+    key = "json",
+    desc = "Output as JSON",
+    commands = { status = true },
+    all = false,
+  },
+  {
+    flags = { "--remove-orphans" },
+    key = "remove_orphans",
+    desc = "Auto-remove orphan symlinks",
+    commands = { clean = true },
+    all = false,
+  },
+  {
+    flags = { "--keep-orphans" },
+    key = "keep_orphans",
+    desc = "Auto-keep orphan symlinks",
+    commands = { clean = true },
+    all = false,
+  },
+  {
+    flags = { "-h", "--help" },
+    key = "help",
+    desc = "Show this help",
+    all = true,
+  },
+}
+
+local command_summaries = {
+  link = "link <packages...>    Create symlinks for packages",
+  unlink = "unlink <packages...>  Remove symlinks for packages",
+  status = "status                Show status of all packages",
+  clean = "clean                 Remove orphan symlinks",
+}
+
+local function options_for(command)
+  local applicable = {}
+  for _, option in ipairs(cli_options) do
+    if option.all or (command and option.commands and option.commands[command]) then
+      applicable[#applicable + 1] = option
+    end
+  end
+  return applicable
+end
+
+local function find_option(options, arg)
+  for _, option in ipairs(options) do
+    for _, flag in ipairs(option.flags) do
+      if flag == arg then return option end
+    end
+  end
+  return nil
+end
+
+local function levenshtein(a, b)
+  local matrix = {}
+  for i = 0, #a do
+    matrix[i] = {}
+    for j = 0, #b do
+      if i == 0 then
+        matrix[i][j] = j
+      elseif j == 0 then
+        matrix[i][j] = i
+      else
+        matrix[i][j] = math.min(
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] + (a:sub(i, i) == b:sub(j, j) and 0 or 1)
+        )
+      end
+    end
+  end
+  return matrix[#a][#b]
+end
+
+local function suggest_option(options, arg)
+  local best, best_distance = nil, math.huge
+  for _, option in ipairs(options) do
+    for _, flag in ipairs(option.flags) do
+      local distance = levenshtein(arg, flag)
+      if distance < best_distance then
+        best_distance = distance
+        best = flag
+      end
+    end
+  end
+  if best and best_distance <= 2 then return best end
+  return nil
+end
+
+local function suggest_command(arg)
+  local best, best_distance = nil, math.huge
+  for command in pairs(command_summaries) do
+    local distance = levenshtein(arg, command)
+    if distance < best_distance then
+      best_distance = distance
+      best = command
+    end
+  end
+  if best and best_distance <= 2 then return best end
+  return nil
+end
+
+local function render_options(command)
+  local lines = {}
+  local max_len = 0
+  for _, option in ipairs(options_for(command)) do
+    local flags = table.concat(option.flags, ", ")
+    if option.arg then flags = flags .. " <" .. option.arg .. ">" end
+    if #flags > max_len then max_len = #flags end
+  end
+  for _, option in ipairs(options_for(command)) do
+    local flags = table.concat(option.flags, ", ")
+    if option.arg then flags = flags .. " <" .. option.arg .. ">" end
+    lines[#lines + 1] = "  " .. flags .. string.rep(" ", max_len - #flags + 3) .. option.desc
+  end
+  return table.concat(lines, "\n")
+end
 
 local command_examples = {
   link = [[
@@ -695,18 +862,12 @@ Examples:
 ]],
 }
 
-local command_summaries = {
-  link = "link <packages...>    Create symlinks for packages",
-  unlink = "unlink <packages...>  Remove symlinks for packages",
-  status = "status                Show status of all packages",
-  clean = "clean                 Remove orphan symlinks",
-}
-
 function module.show_help(command)
   if command and command_summaries[command] then
     output.write(output.color("bold"), "lnko", output.reset(), " ", command, "\n\n")
     output.write(command_summaries[command], "\n\n")
-    output.write(help_options, "\n")
+    output.write("Options:\n")
+    output.write(render_options(command), "\n")
     if command_examples[command] then output.write("\n", command_examples[command]) end
     return
   end
@@ -724,25 +885,14 @@ Commands:
 
   output.write([[
 
-Run 'lnko <command> --help' for command-specific examples.
+Options:
 ]])
+  output.write(render_options(nil), "\n")
+  output.write("\nRun 'lnko <command> --help' for command-specific examples.\n")
 end
 
 function module.main(args)
-  local options = {
-    source_dir = nil,
-    target_dir = os.getenv("HOME"),
-    dry_run = false,
-    verbose = false,
-    backup = false,
-    skip = false,
-    force = false,
-    ignore = {},
-    no_folding = false,
-    remove_orphans = false,
-    keep_orphans = false,
-    json = false,
-  }
+  local options = {}
   local command = nil
   local packages = {}
 
@@ -750,40 +900,57 @@ function module.main(args)
   while i <= #args do
     local a = args[i]
 
-    if a == "-h" or a == "--help" then
-      local scope = nil
-      if command then scope = command end
-      module.show_help(scope)
-      os.exit(0)
-    elseif a == "-d" or a == "--dir" then
-      i = i + 1
-      options.source_dir = args[i]
-    elseif a == "-t" or a == "--target" then
-      i = i + 1
-      options.target_dir = args[i]
-    elseif a == "-n" or a == "--dry-run" then
-      options.dry_run = true
-    elseif a == "-v" or a == "--verbose" then
-      options.verbose = true
-    elseif a == "-b" or a == "--backup" then
-      options.backup = true
-    elseif a == "-s" or a == "--skip" then
-      options.skip = true
-    elseif a == "-f" or a == "--force" then
-      options.force = true
-    elseif a == "--ignore" then
-      i = i + 1
-      options.ignore[#options.ignore + 1] = args[i]
-    elseif a == "--no-folding" then
-      options.no_folding = true
-    elseif a == "--json" then
-      options.json = true
-    elseif a == "--remove-orphans" then
-      options.remove_orphans = true
-    elseif a == "--keep-orphans" then
-      options.keep_orphans = true
+    local option = find_option(cli_options, a)
+
+    if option == nil then
+      if a:sub(1, 1) == "-" then
+        log.error("unknown option: " .. a)
+        local suggestion = suggest_option(options_for(command), a)
+        if suggestion then log.error("did you mean '" .. suggestion .. "'?") end
+        log.error("run 'lnko " .. (command or "") .. " --help' for usage")
+        os.exit(2)
+      end
+    end
+
+    if option then
+      if command and not option.all and option.commands and not option.commands[command] then
+        log.error("unknown option for " .. command .. ": " .. a)
+        local suggestion = suggest_option(options_for(command), a)
+        if suggestion then log.error("did you mean '" .. suggestion .. "'?") end
+        os.exit(2)
+      end
+
+      if option.key == "help" then
+        module.show_help(command)
+        os.exit(0)
+      end
+
+      if option.arg then
+        i = i + 1
+        local value = args[i]
+        if not value or value:sub(1, 1) == "-" then
+          log.error("option " .. a .. " requires a value")
+          os.exit(2)
+        end
+        if option.list then
+          options[option.key] = options[option.key] or {}
+          options[option.key][#options[option.key] + 1] = value
+        else
+          options[option.key] = value
+        end
+      else
+        options[option.key] = true
+      end
     elseif not command then
       command = a
+
+      if not command_summaries[command] then
+        log.error("unknown command: " .. command)
+        local suggestion = suggest_command(command)
+        if suggestion then log.error("did you mean '" .. suggestion .. "'?") end
+        log.error("run 'lnko --help' for usage")
+        os.exit(2)
+      end
     else
       packages[#packages + 1] = a
     end
@@ -795,7 +962,19 @@ function module.main(args)
     module.show_help()
     os.exit(2)
   end
+
+  for _, option in ipairs(options_for(command)) do
+    if option.key ~= "help" and options[option.key] == nil then
+      if option.list then
+        options[option.key] = {}
+      else
+        options[option.key] = false
+      end
+    end
+  end
+
   if not options.source_dir then options.source_dir = fs.current_dir() end
+  if not options.target_dir then options.target_dir = os.getenv("HOME") end
 
   if not fs.is_directory(options.source_dir) then
     log.error("source directory not found: " .. options.source_dir)

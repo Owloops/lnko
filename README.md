@@ -92,20 +92,23 @@ lnko clean
 
 ### Options
 
-| Option | Description |
-|--------|-------------|
-| `-d, --dir <dir>` | Source directory containing packages (default: cwd) |
-| `-t, --target <dir>` | Target directory (default: $HOME) |
-| `-n, --dry-run` | Show what would be done |
-| `-v, --verbose` | Show debug output |
-| `-b, --backup` | Auto-backup conflicts to `<target>/.lnko-backup/` |
-| `-s, --skip` | Auto-skip conflicts |
-| `-f, --force` | Auto-overwrite conflicts (dangerous) |
-| `--ignore <glob>` | Ignore files matching glob (can be repeated; use `/` for path-scoped globs, basename otherwise) |
-| `--no-folding` | Don't fold directories into symlinks |
-| `--json` | Output JSON (with `status`) |
-| `--remove-orphans` | Auto-remove orphan symlinks (for `clean` command) |
-| `--keep-orphans` | Auto-keep orphan symlinks (for `clean` command) |
+Options are scoped per command (`--backup` applies to `link`, `--json` to `status`, etc.). Run `lnko <command> --help` to see the exact set. Unknown options are rejected with a suggestion.
+
+| Option | Commands | Description |
+|--------|----------|-------------|
+| `-d, --dir <dir>` | all | Source directory containing packages (default: cwd) |
+| `-t, --target <dir>` | all | Target directory (default: $HOME) |
+| `-n, --dry-run` | link, unlink, clean | Show what would be done |
+| `-v, --verbose` | all | Show debug output |
+| `-b, --backup` | link | Auto-backup conflicts to `<target>/.lnko-backup/` |
+| `-s, --skip` | link | Auto-skip conflicts |
+| `-f, --force` | link | Auto-overwrite conflicts (dangerous) |
+| `--ignore <glob>` | link | Ignore files matching glob (can be repeated; use `/` for path-scoped globs, basename otherwise) |
+| `--no-folding` | link | Don't fold directories into symlinks |
+| `--json` | status | Output JSON |
+| `--remove-orphans` | clean | Auto-remove orphan symlinks |
+| `--keep-orphans` | clean | Auto-keep orphan symlinks |
+| `-h, --help` | all | Show help |
 
 ### Conflict Handling
 
