@@ -186,7 +186,7 @@ Running `lnko link -d dotfiles -t ~ bash git` creates:
 
 ## Example
 
-See [pgagnidze/dotfiles](https://github.com/pgagnidze/dotfiles) for a real-world example using lnko.
+See [papungag/dotfiles](https://codeberg.org/papungag/dotfiles) for a real-world example using lnko.
 
 ## Comparison with GNU Stow
 
