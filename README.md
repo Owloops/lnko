@@ -118,6 +118,20 @@ When lnko encounters existing files, it prompts for action:
 
 Use `-b`, `-s`, or `-f` flags to auto-resolve conflicts.
 
+### Status
+
+`lnko status` classifies each package into one state:
+
+| Status | Meaning |
+|--------|---------|
+| `ok` | every package path is linked |
+| `partial` | some paths linked, some missing |
+| `occupied` | no paths linked here; existing symlinks are owned by sibling packages from the same source dir |
+| `not linked` | nothing linked and targets missing |
+| `conflict` | a path is a real file or a symlink pointing outside the source dir |
+
+Multi-host setups typically show host packages (e.g. `fedora`, `termux`) as `occupied` on other machines.
+
 ## How It Works
 
 lnko creates relative symlinks from a source directory (containing "packages") to a target directory. Each package is a directory whose contents mirror the target structure.
