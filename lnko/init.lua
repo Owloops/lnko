@@ -4,6 +4,7 @@ local fs = require("lnko.fs")
 local plan_mod = require("lnko.plan")
 local tree = require("lnko.tree")
 local output = require("lnko.output")
+local json = require("lnko.json")
 
 -- colors --
 
@@ -409,15 +410,12 @@ function module.unlink_package(source_dir, package, target_dir, options)
   return failed == 0
 end
 
-function module.show_status(source_dir, target_dir, _options)
+function module.get_status(source_dir, target_dir)
   source_dir = fs.canonical(source_dir)
   target_dir = fs.canonical(target_dir)
   local packages = list_packages(source_dir)
 
-  if #packages == 0 then
-    log.warn("no packages found in " .. source_dir)
-    return
-  end
+  local results = {}
 
   local source_prefix = source_dir .. "/"
 
@@ -487,33 +485,66 @@ function module.show_status(source_dir, target_dir, _options)
 
     count_dir(pkg_dir, target_dir)
 
-    local status_color = "green"
     local status_text = "ok"
 
     if conflict > 0 then
-      status_color = "red"
       status_text = "conflict"
     elseif linked == 0 and occupied > 0 then
-      status_color = "bright_black"
       status_text = "occupied"
     elseif total == 0 or (missing > 0 and linked == 0) then
-      status_color = "bright_black"
       status_text = "not linked"
     elseif missing > 0 then
-      status_color = "yellow"
       status_text = "partial"
     end
 
-    local item_word = total == 1 and "item" or "items"
+    results[#results + 1] = {
+      package = package,
+      status = status_text,
+      total = total,
+      linked = linked,
+      missing = missing,
+      occupied = occupied,
+      conflict = conflict,
+    }
+  end
+
+  return results
+end
+
+function module.show_status(source_dir, target_dir, options)
+  options = options or {}
+
+  local results = module.get_status(source_dir, target_dir)
+
+  if #results == 0 then
+    log.warn("no packages found in " .. source_dir)
+    return
+  end
+
+  if options.json then
+    output.write(json.encode(results), "\n")
+    return
+  end
+
+  local status_colors = {
+    ok = "green",
+    conflict = "red",
+    occupied = "bright_black",
+    ["not linked"] = "bright_black",
+    partial = "yellow",
+  }
+
+  for _, result in ipairs(results) do
+    local item_word = result.total == 1 and "item" or "items"
     output.write(
-      output.color(status_color),
-      string.format("%-12s", status_text),
+      output.color(status_colors[result.status]),
+      string.format("%-12s", result.status),
       output.reset(),
       " ",
-      package,
+      result.package,
       output.color("bright_black"),
       " (",
-      total,
+      result.total,
       " ",
       item_word,
       ")",
@@ -627,6 +658,7 @@ Options:
   --ignore <glob>       Ignore files matching glob (can be repeated;
                         use '/' for path-scoped globs, basename otherwise)
   --no-folding          Don't fold directories into symlinks
+  --json                Output as JSON (with status)
   --remove-orphans      Auto-remove orphan symlinks
   --keep-orphans        Auto-keep orphan symlinks
   -h, --help            Show this help
@@ -662,6 +694,7 @@ function module.main(args)
     no_folding = false,
     remove_orphans = false,
     keep_orphans = false,
+    json = false,
   }
   local command = nil
   local packages = {}
@@ -694,6 +727,8 @@ function module.main(args)
       options.ignore[#options.ignore + 1] = args[i]
     elseif a == "--no-folding" then
       options.no_folding = true
+    elseif a == "--json" then
+      options.json = true
     elseif a == "--remove-orphans" then
       options.remove_orphans = true
     elseif a == "--keep-orphans" then

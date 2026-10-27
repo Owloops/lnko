@@ -103,6 +103,7 @@ lnko clean
 | `-f, --force` | Auto-overwrite conflicts (dangerous) |
 | `--ignore <glob>` | Ignore files matching glob (can be repeated; use `/` for path-scoped globs, basename otherwise) |
 | `--no-folding` | Don't fold directories into symlinks |
+| `--json` | Output JSON (with `status`) |
 | `--remove-orphans` | Auto-remove orphan symlinks (for `clean` command) |
 | `--keep-orphans` | Auto-keep orphan symlinks (for `clean` command) |
 
@@ -131,6 +132,12 @@ Use `-b`, `-s`, or `-f` flags to auto-resolve conflicts.
 | `conflict` | a path is a real file or a symlink pointing outside the source dir |
 
 Multi-host setups typically show host packages (e.g. `fedora`, `termux`) as `occupied` on other machines.
+
+Use `lnko status --json` for machine-readable output:
+
+```json
+[{"package":"termux","status":"occupied","total":2,"linked":0,"missing":0,"occupied":2,"conflict":0}]
+```
 
 ## How It Works
 

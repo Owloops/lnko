@@ -1,6 +1,7 @@
 local lnko = require("lnko")
 local fs = require("lnko.fs")
 local plan = require("lnko.plan")
+local json = require("lnko.json")
 
 describe("lnko", function()
   local test_dir = "/tmp/lnko-test-" .. os.time() .. "-" .. math.random(10000)
@@ -39,6 +40,36 @@ describe("lnko", function()
       local p = lnko.plan_link(source, "empty_pkg", target, {})
       local tasks = plan.get_tasks(p)
       assert.are.equal(0, #tasks)
+    end)
+
+    it("should report occupied by sibling package", function()
+      local source = test_dir .. "/status_sibling_source"
+      local target = test_dir .. "/status_sibling_target"
+      os.execute("mkdir -p " .. source .. "/host_a")
+      os.execute("mkdir -p " .. source .. "/host_b")
+      os.execute("mkdir -p " .. target)
+      os.execute("echo a > " .. source .. "/host_a/.bashrc")
+      os.execute("echo b > " .. source .. "/host_b/.bashrc")
+
+      lnko.link_package(source, "host_a", target, { skip = true })
+
+      local results = lnko.get_status(source, target)
+      local by_name = {}
+      for _, r in ipairs(results) do
+        by_name[r.package] = r
+      end
+      assert.are.equal("ok", by_name["host_a"].status)
+      assert.are.equal("occupied", by_name["host_b"].status)
+    end)
+  end)
+
+  describe("json", function()
+    it("should encode primitives and tables", function()
+      assert.are.equal("null", json.encode(nil))
+      assert.are.equal("true", json.encode(true))
+      assert.are.equal('"a\\nb"', json.encode("a\nb"))
+      assert.are.equal("[1,2]", json.encode({ 1, 2 }))
+      assert.are.equal('{"a":1}', json.encode({ a = 1 }))
     end)
   end)
 
