@@ -21,28 +21,28 @@ local action_colors = {
 local log = {}
 
 function log.info(msg)
-  output.write(output.color("blue"), "[info]", output.reset(), " ", msg, "\n")
+  output.err(output.color("blue"), "[info]", output.reset(), " ", msg, "\n")
 end
 
 function log.success(msg)
-  output.write(output.color("green"), "[success]", output.reset(), " ", msg, "\n")
+  output.err(output.color("green"), "[success]", output.reset(), " ", msg, "\n")
 end
 
 function log.warn(msg)
-  output.write(output.color("yellow"), "[warn]", output.reset(), " ", msg, "\n")
+  output.err(output.color("yellow"), "[warn]", output.reset(), " ", msg, "\n")
 end
 
 function log.error(msg)
-  io.stderr:write(output.color("red") .. "[error]" .. output.reset() .. " " .. msg .. "\n")
+  output.err(output.color("red"), "[error]", output.reset(), " ", msg, "\n")
 end
 
 function log.debug(msg, verbose)
-  if verbose then output.write(output.color("bright_black"), "[debug]", output.reset(), " ", msg, "\n") end
+  if verbose then output.err(output.color("bright_black"), "[debug]", output.reset(), " ", msg, "\n") end
 end
 
 function log.action(action, path)
   local color = action_colors[action] or "white"
-  output.write("  ", output.color(color), action, output.reset(), " ", path, "\n")
+  output.err("  ", output.color(color), action, output.reset(), " ", path, "\n")
 end
 
 -- helpers --
@@ -105,8 +105,8 @@ local function ask_conflict(target_path, options)
   if options.skip then return "skip" end
   if options.force then return "overwrite" end
 
-  output.write(output.color("yellow"), "  conflict", output.reset(), " ", target_path, "\n")
-  output.write("    [b]ackup  [s]kip  [o]verwrite  [d]iff  [q]uit? ")
+  output.err(output.color("yellow"), "  conflict", output.reset(), " ", target_path, "\n")
+  output.err("    [b]ackup  [s]kip  [o]verwrite  [d]iff  [q]uit? ")
 
   local answer = io.read("*l")
   if not answer then return "quit" end
@@ -573,7 +573,7 @@ function module.clean_orphans(source_dir, target_dir, options)
       action = "keep"
     else
       output.write(output.color("yellow"), "  orphan", output.reset(), " ", orphan.link, "\n")
-      output.write("    [r]emove  [k]eep  [a]ll remove  [n]one? ")
+      output.err("    [r]emove  [k]eep  [a]ll remove  [n]one? ")
 
       local answer = io.read("*l")
       if answer then

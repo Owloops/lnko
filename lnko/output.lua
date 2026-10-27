@@ -25,13 +25,21 @@ local function seq(code)
   return string.char(27) .. "[" .. code .. "m"
 end
 
-function module.write(...)
+local function emit(stream, ...)
   local args = { ... }
   for i = 1, #args do
     args[i] = tostring(args[i])
   end
-  io.stderr:write(table.concat(args))
-  io.stderr:flush()
+  stream:write(table.concat(args))
+  stream:flush()
+end
+
+function module.write(...)
+  emit(io.stdout, ...)
+end
+
+function module.err(...)
+  emit(io.stderr, ...)
 end
 
 function module.color(name)
