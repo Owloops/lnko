@@ -60,6 +60,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Bake version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            V="${GITHUB_REF_NAME#v}"
+          else
+            V="$(git describe --tags --always 2>/dev/null || echo dev)"
+          fi
+          {
+            printf 'return {\n'
+            printf '  version = "%s",\n' "$V"
+            printf '  commit = "%s",\n' "${GITHUB_SHA::7}"
+            printf '  built = "%s",\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            printf '}\n'
+          } > lnko/version.lua
       - name: Build all targets
         uses: Owloops/luast@main
         with:
@@ -80,6 +96,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Bake version
+        run: |
+          {
+            printf 'return {\n'
+            printf '  version = "%s",\n' "${GITHUB_REF_NAME#v}"
+            printf '  commit = "%s",\n' "${GITHUB_SHA::7}"
+            printf '  built = "%s",\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            printf '}\n'
+          } > lnko/version.lua
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:

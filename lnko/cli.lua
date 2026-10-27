@@ -4,6 +4,7 @@ local fs = require("lnko.fs")
 local log = require("lnko.log")
 local output = require("lnko.output")
 local config_mod = require("lnko.config")
+local version = require("lnko.version")
 
 local cli_options = {
   {
@@ -102,6 +103,12 @@ local cli_options = {
     flags = { "-h", "--help" },
     key = "help",
     desc = "Show this help",
+    all = true,
+  },
+  {
+    flags = { "--version" },
+    key = "version",
+    desc = "Show version",
     all = true,
   },
 }
@@ -242,6 +249,16 @@ local function render_options(command)
   end
 end
 
+function module.show_version()
+  local parts = {}
+
+  if version.commit ~= "" then parts[#parts + 1] = "commit: " .. version.commit end
+  if version.built ~= "" then parts[#parts + 1] = "built: " .. version.built end
+
+  local extra = #parts > 0 and (" (" .. table.concat(parts, ", ") .. ")") or ""
+  output.write("lnko ", version.version, extra, "\n")
+end
+
 function module.show_help(command)
   if command and command_lookup[command] then
     local spec = command_lookup[command]
@@ -327,6 +344,11 @@ function module.run(commands, args)
 
       if option.key == "help" then
         module.show_help(command)
+        os.exit(0)
+      end
+
+      if option.key == "version" then
+        module.show_version()
         os.exit(0)
       end
 

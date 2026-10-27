@@ -109,6 +109,7 @@ Options are scoped per command (`--backup` applies to `link`, `--json` to `statu
 | `--remove-orphans` | clean | Auto-remove orphan symlinks |
 | `--keep-orphans` | clean | Auto-keep orphan symlinks |
 | `-h, --help` | all | Show help |
+| `--version` | all | Show version |
 
 ### Config File
 
