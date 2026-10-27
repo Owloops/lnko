@@ -419,12 +419,25 @@ function module.show_status(source_dir, target_dir, _options)
     return
   end
 
+  local source_prefix = source_dir .. "/"
+
   for _, package in ipairs(packages) do
     local pkg_dir = fs.join(source_dir, package)
+    local pkg_prefix = pkg_dir .. "/"
     local linked = 0
     local missing = 0
     local conflict = 0
+    local occupied = 0
     local total = 0
+
+    local function is_occupied_by_sibling(target_path)
+      local resolved = fs.canonical(fs.resolve_symlink(target_path))
+      if not resolved then return false end
+
+      if resolved:sub(1, #source_prefix) ~= source_prefix then return false end
+
+      return resolved:sub(1, #pkg_prefix) ~= pkg_prefix
+    end
 
     local function count_dir(pkg_subdir, target_subdir)
       local entries = fs.dir(pkg_subdir)
@@ -435,11 +448,12 @@ function module.show_status(source_dir, target_dir, _options)
 
         if fs.is_directory(source_path) and not fs.is_symlink(source_path) then
           if fs.is_symlink(target_path) then
+            total = total + 1
             if fs.symlink_points_to(target_path, source_path) then
-              total = total + 1
               linked = linked + 1
+            elseif is_occupied_by_sibling(target_path) then
+              occupied = occupied + 1
             else
-              total = total + 1
               conflict = conflict + 1
             end
           elseif fs.is_directory(target_path) then
@@ -457,6 +471,8 @@ function module.show_status(source_dir, target_dir, _options)
           if fs.is_symlink(target_path) then
             if fs.symlink_points_to(target_path, source_path) then
               linked = linked + 1
+            elseif is_occupied_by_sibling(target_path) then
+              occupied = occupied + 1
             else
               conflict = conflict + 1
             end
@@ -477,6 +493,9 @@ function module.show_status(source_dir, target_dir, _options)
     if conflict > 0 then
       status_color = "red"
       status_text = "conflict"
+    elseif linked == 0 and occupied > 0 then
+      status_color = "bright_black"
+      status_text = "occupied"
     elseif total == 0 or (missing > 0 and linked == 0) then
       status_color = "bright_black"
       status_text = "not linked"
