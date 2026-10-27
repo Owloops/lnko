@@ -41,6 +41,10 @@ function log.debug(msg, verbose)
   if verbose then output.err(output.color("bright_black"), "[debug]", output.reset(), " ", msg, "\n") end
 end
 
+function log.hint(msg)
+  output.err(output.color("bright_black"), "  hint: ", output.reset(), msg, "\n")
+end
+
 function log.action(action, path)
   local color = action_colors[action] or "white"
   output.err("  ", output.color(color), action, output.reset(), " ", path, "\n")
@@ -324,7 +328,8 @@ end
 function module.link_package(source_dir, package, target_dir, options)
   options = options or {}
 
-  log.info("linking " .. package)
+  local verbose_hint = options.verbose or options.dry_run
+  if verbose_hint then log.info("linking " .. package) end
 
   local plan = module.plan_link(source_dir, package, target_dir, options)
 
@@ -366,17 +371,19 @@ function module.link_package(source_dir, package, target_dir, options)
 
   if failed > 0 then
     log.warn(package .. ": " .. executed .. " completed, " .. failed .. " failed")
-  else
-    log.success(package .. ": " .. executed .. " tasks completed")
+    return false
   end
 
-  return failed == 0
+  log.success(package .. ": " .. executed .. " tasks completed")
+  if not options.dry_run then log.hint("run 'lnko unlink " .. package .. "' to undo") end
+
+  return true
 end
 
 function module.unlink_package(source_dir, package, target_dir, options)
   options = options or {}
 
-  log.info("unlinking " .. package)
+  if options.verbose or options.dry_run then log.info("unlinking " .. package) end
 
   local plan = module.plan_unlink(source_dir, package, target_dir, options)
 
@@ -403,11 +410,13 @@ function module.unlink_package(source_dir, package, target_dir, options)
 
   if failed > 0 then
     log.warn(package .. ": " .. executed .. " completed, " .. failed .. " failed")
-  else
-    log.success(package .. ": " .. executed .. " unlinked")
+    return false
   end
 
-  return failed == 0
+  log.success(package .. ": " .. executed .. " unlinked")
+  if not options.dry_run then log.hint("run 'lnko link " .. package .. "' to relink") end
+
+  return true
 end
 
 function module.get_status(source_dir, target_dir)
