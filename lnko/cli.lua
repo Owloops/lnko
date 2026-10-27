@@ -106,18 +106,26 @@ local cli_options = {
   },
 }
 
-local command_summaries = {
-  link = "link <packages...>    Create symlinks for packages",
-  unlink = "unlink <packages...>  Remove symlinks for packages",
-  status = "status                Show status of all packages",
-  clean = "clean                 Remove orphan symlinks",
+local cli_commands = {
+  { name = "link", args = "<packages...>", desc = "create symlinks for packages" },
+  { name = "unlink", args = "<packages...>", desc = "remove symlinks for packages" },
+  { name = "status", args = "", desc = "show status of all packages" },
+  { name = "clean", args = "", desc = "remove orphan symlinks" },
 }
 
-local command_order = { "link", "unlink", "status", "clean" }
+local command_lookup = {}
+for _, command in ipairs(cli_commands) do
+  command_lookup[command.name] = command
+end
+
+-- ant by tre, https://asciiart.website/art/96
+
+local banner = [[\(")/
+-( )-
+/(_)\]]
 
 local command_examples = {
   link = [[
-Examples:
   cd ~/dotfiles/config
   lnko link bash git nvim
 
@@ -128,19 +136,16 @@ Examples:
   lnko link -n bash
 ]],
   unlink = [[
-Examples:
   lnko unlink bash
 
   lnko unlink -d ~/dotfiles/config bash git
 ]],
   status = [[
-Examples:
   lnko status -d ~/dotfiles/config
 
   lnko status --json -d ~/dotfiles/config
 ]],
   clean = [[
-Examples:
   lnko clean -d ~/dotfiles/config
 
   lnko clean --remove-orphans -d ~/dotfiles/config
@@ -204,11 +209,11 @@ end
 
 local function suggest_command(arg)
   local best, best_distance = nil, math.huge
-  for _, command in ipairs(command_order) do
-    local distance = levenshtein(arg, command)
+  for _, command in ipairs(cli_commands) do
+    local distance = levenshtein(arg, command.name)
     if distance < best_distance then
       best_distance = distance
-      best = command
+      best = command.name
     end
   end
   if best and best_distance <= 2 then return best end
@@ -216,7 +221,6 @@ local function suggest_command(arg)
 end
 
 local function render_options(command)
-  local lines = {}
   local max_len = 0
   for _, option in ipairs(options_for(command)) do
     local flags = table.concat(option.flags, ", ")
@@ -226,38 +230,69 @@ local function render_options(command)
   for _, option in ipairs(options_for(command)) do
     local flags = table.concat(option.flags, ", ")
     if option.arg then flags = flags .. " <" .. option.arg .. ">" end
-    lines[#lines + 1] = "  " .. flags .. string.rep(" ", max_len - #flags + 3) .. option.desc
+    output.write(
+      "  ",
+      output.color("yellow"),
+      flags,
+      output.reset(),
+      string.rep(" ", max_len - #flags + 3),
+      option.desc,
+      "\n"
+    )
   end
-  return table.concat(lines, "\n")
 end
 
 function module.show_help(command)
-  if command and command_summaries[command] then
-    output.write(output.color("bold"), "lnko", output.reset(), " ", command, "\n\n")
-    output.write(command_summaries[command], "\n\n")
-    output.write("Options:\n")
-    output.write(render_options(command), "\n")
-    if command_examples[command] then output.write("\n", command_examples[command]) end
+  if command and command_lookup[command] then
+    local spec = command_lookup[command]
+
+    output.write(output.color("cyan"), "usage:", output.reset(), " lnko ", command)
+    if spec.args ~= "" then output.write(" ", spec.args) end
+    output.write("\n\n")
+
+    output.write(spec.desc, "\n\n")
+    output.write(output.color("bright_black"), "options:\n", output.reset())
+    render_options(command)
+
+    output.write(output.color("bright_black"), "\nexamples:\n", output.reset())
+    output.write(command_examples[command])
     return
   end
 
-  output.write(output.color("bold"), "lnko", output.reset(), " - a simple stow-like dotfile linker\n")
-  output.write([[
-Usage: lnko <command> [options] [packages...]
+  output.write(output.color("blue"), banner, output.reset(), "\n")
+  output.write(output.color("cyan"), "usage:", output.reset(), " lnko <command> [options] [packages...]\n\n")
 
-Commands:
-]])
+  output.write(output.color("bright_black"), "commands:\n", output.reset())
 
-  for _, name in ipairs(command_order) do
-    output.write("  ", command_summaries[name], "\n")
+  local max_name = 0
+  local max_args = 0
+  for _, spec in ipairs(cli_commands) do
+    if #spec.name > max_name then max_name = #spec.name end
+    if #spec.args > max_args then max_args = #spec.args end
+  end
+  for _, spec in ipairs(cli_commands) do
+    output.write(
+      "  ",
+      output.color("cyan"),
+      spec.name,
+      output.reset(),
+      string.rep(" ", max_name - #spec.name + 1),
+      spec.args,
+      string.rep(" ", max_args - #spec.args + 2),
+      spec.desc,
+      "\n"
+    )
   end
 
-  output.write([[
-
-Options:
-]])
-  output.write(render_options(nil), "\n")
-  output.write("\nRun 'lnko <command> --help' for command-specific examples.\n")
+  output.write(output.color("bright_black"), "\noptions:\n", output.reset())
+  render_options(nil)
+  output.write(
+    "\nrun '",
+    output.color("cyan"),
+    "lnko <command> --help",
+    output.reset(),
+    "' for command-specific examples.\n"
+  )
 end
 
 function module.run(commands, args)
@@ -316,7 +351,7 @@ function module.run(commands, args)
     elseif not command then
       command = a
 
-      if not command_summaries[command] then
+      if not command_lookup[command] then
         log.error("unknown command: " .. command)
         local suggestion = suggest_command(command)
         if suggestion then log.error("did you mean '" .. suggestion .. "'?") end

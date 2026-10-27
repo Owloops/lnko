@@ -17,6 +17,7 @@ local codes = {
   green = 32,
   yellow = 33,
   blue = 34,
+  cyan = 36,
   bright_black = 90,
 }
 
