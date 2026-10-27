@@ -26,10 +26,13 @@ build = {
     type = "builtin",
     modules = {
         ["lnko"] = "lnko/init.lua",
+        ["lnko.cli"] = "lnko/cli.lua",
         ["lnko.fs"] = "lnko/fs.lua",
+        ["lnko.json"] = "lnko/json.lua",
+        ["lnko.log"] = "lnko/log.lua",
+        ["lnko.output"] = "lnko/output.lua",
         ["lnko.plan"] = "lnko/plan.lua",
         ["lnko.tree"] = "lnko/tree.lua",
-        ["lnko.output"] = "lnko/output.lua",
     },
     install = {
         bin = {
