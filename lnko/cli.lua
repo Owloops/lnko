@@ -3,6 +3,7 @@ local module = {}
 local fs = require("lnko.fs")
 local log = require("lnko.log")
 local output = require("lnko.output")
+local config_mod = require("lnko.config")
 
 local cli_options = {
   {
@@ -89,6 +90,13 @@ local cli_options = {
     desc = "Auto-keep orphan symlinks",
     commands = { clean = true },
     all = false,
+  },
+  {
+    flags = { "--config" },
+    key = "config",
+    arg = "file",
+    desc = "Config file path (default: .lnkorc in source dir, env: LNKO_CONFIG)",
+    all = true,
   },
   {
     flags = { "-h", "--help" },
@@ -254,6 +262,7 @@ end
 
 function module.run(commands, args)
   local options = {}
+  local explicit = {}
   local command = nil
   local packages = {}
 
@@ -299,8 +308,10 @@ function module.run(commands, args)
         else
           options[option.key] = value
         end
+        explicit[option.key] = true
       else
         options[option.key] = true
+        explicit[option.key] = true
       end
     elseif not command then
       command = a
@@ -337,6 +348,28 @@ function module.run(commands, args)
   if not options.source_dir then options.source_dir = fs.current_dir() end
   if not options.target_dir then options.target_dir = os.getenv("HOME") end
 
+  local config_path, config_required
+
+  if options.config then
+    config_path = fs.absolute(config_mod.expand(options.config))
+    config_required = true
+  else
+    config_path, config_required = config_mod.find(options.source_dir)
+  end
+
+  if config_path then
+    local config = config_mod.load(config_path)
+    if config then
+      config_mod.apply(options, config, explicit)
+    elseif config_required then
+      os.exit(1)
+    end
+  elseif config_required then
+    os.exit(1)
+  end
+
+  if not options.source_dir then options.source_dir = fs.current_dir() end
+
   if not fs.is_directory(options.source_dir) then
     log.error("source directory not found: " .. options.source_dir)
     os.exit(1)
@@ -350,6 +383,7 @@ function module.run(commands, args)
   if options.dry_run then log.warn("dry-run mode, no changes will be made") end
 
   if command == "link" then
+    if #packages == 0 and options.packages then packages = options.packages end
     if #packages == 0 then
       log.error("no packages specified")
       os.exit(2)

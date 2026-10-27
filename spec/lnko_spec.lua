@@ -2,6 +2,7 @@ local lnko = require("lnko")
 local fs = require("lnko.fs")
 local plan = require("lnko.plan")
 local json = require("lnko.json")
+local config = require("lnko.config")
 
 describe("lnko", function()
   local test_dir = "/tmp/lnko-test-" .. os.time() .. "-" .. math.random(10000)
@@ -70,6 +71,32 @@ describe("lnko", function()
       assert.are.equal('"a\\nb"', json.encode("a\nb"))
       assert.are.equal("[1,2]", json.encode({ 1, 2 }))
       assert.are.equal('{"a":1}', json.encode({ a = 1 }))
+    end)
+  end)
+
+  describe("config", function()
+    it("should find .lnkorc in source dir", function()
+      local source = test_dir .. "/config_source"
+      os.execute("mkdir -p " .. source .. "/pkg")
+      local rc = source .. "/.lnkorc"
+      local f = io.open(rc, "w")
+      f:write('return { target = "/tmp" }')
+      f:close()
+      assert.are.equal(rc, config.find(source))
+    end)
+
+    it("should apply config with cli precedence", function()
+      local options = { source_dir = "/a" }
+      local explicit = { source_dir = true }
+      config.apply(options, { dir = "/from/config", ignore = { ".git" } }, explicit)
+      assert.are.equal("/a", options.source_dir)
+      assert.are.same({ ".git" }, options.ignore)
+    end)
+
+    it("should expand tilde in config paths", function()
+      local options = {}
+      config.apply(options, { dir = "~/dotfiles" }, {})
+      assert.are.equal((os.getenv("HOME") or "") .. "/dotfiles", options.source_dir)
     end)
   end)
 

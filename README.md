@@ -110,6 +110,26 @@ Options are scoped per command (`--backup` applies to `link`, `--json` to `statu
 | `--keep-orphans` | clean | Auto-keep orphan symlinks |
 | `-h, --help` | all | Show help |
 
+### Config File
+
+An optional `.lnkorc` in the source directory provides defaults so you don't repeat flags. It's a Lua file returning a table:
+
+```lua
+return {
+  dir = "~/dotfiles/config",
+  target = "~",
+  ignore = { ".git", "*.swp" },
+  packages = os.getenv("TERMUX_VERSION")
+      and { "bash", "git", "termux", "nvim" }
+      or { "bash", "git", "fedora", "nvim", "tmux" },
+}
+```
+
+- Keys map to options: `dir`, `target`, `ignore`, `no_folding`, and `packages` (defaults for a bare `lnko link`).
+- Explicit command-line flags always win over config values.
+- The file is executable Lua, so per-host logic (like the `TERMUX_VERSION` check above) lives in the config, not in lnko.
+- Override the location with `--config <file>` or the `LNKO_CONFIG` environment variable.
+
 ### Conflict Handling
 
 When lnko encounters existing files, it prompts for action:

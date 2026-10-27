@@ -43,6 +43,7 @@ build = {
     modules = {
         ["lnko"] = "lnko/init.lua",
         ["lnko.cli"] = "lnko/cli.lua",
+        ["lnko.config"] = "lnko/config.lua",
         ["lnko.fs"] = "lnko/fs.lua",
         ["lnko.json"] = "lnko/json.lua",
         ["lnko.log"] = "lnko/log.lua",
